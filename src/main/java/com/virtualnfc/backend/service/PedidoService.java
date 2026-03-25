@@ -2,10 +2,14 @@ package com.virtualnfc.backend.service;
 
 import com.virtualnfc.backend.dto.ItemPedidoDto;
 import com.virtualnfc.backend.dto.PedidoDto;
+import com.virtualnfc.backend.entity.Produto;
+import com.virtualnfc.backend.repository.ProdutoRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
+
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -14,17 +18,27 @@ public class PedidoService {
     private final String PAGBANK_URL = "https://sandbox.api.pagseguro.com/checkouts";
     private final String TOKEN = "060909b0-be80-492a-9ac4-059a44184d86eb0ad1d04fa5952c81cb3827712bd6d390a6-43fd-4d0b-a40e-de3494b12267";
 
+    private final ProdutoRepository produtoRepository;
+
+    public PedidoService(ProdutoRepository produtoRepository) {
+        this.produtoRepository = produtoRepository;
+    }
     public String gerarLinkPagamento(PedidoDto pedidoDto) {
         List<Map<String, Object>> itensValidados = new ArrayList<>();
 
         for (ItemPedidoDto itemEnviado : pedidoDto.itens()) {
-
-            double precoSeguro = itemEnviado.preco();
-
+            Long produtoId = Long.parseLong(itemEnviado.id());
+            Produto produtoNoBanco = produtoRepository.findById(produtoId)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+            BigDecimal precoSeguro = produtoNoBanco.getPreco();
+            if (itemEnviado.quantidade() == null || itemEnviado.quantidade() <= 0) {    
+                throw new RuntimeException("Quantidade inválida para o produto: " + produtoNoBanco.getNome());
+            }
             Map<String, Object> itemMap = new HashMap<>();
-            itemMap.put("name", itemEnviado.nome());
+            itemMap.put("name", produtoNoBanco.getNome());            
             itemMap.put("quantity", itemEnviado.quantidade());
-            itemMap.put("unit_amount", (int) (precoSeguro * 100));
+            int valorEmCentavos = precoSeguro.multiply(new BigDecimal("100")).intValue();
+            itemMap.put("unit_amount", valorEmCentavos);            
             itensValidados.add(itemMap);
         }
 
@@ -40,8 +54,8 @@ public class PedidoService {
         Map<String, Object> body = new HashMap<>();
         body.put("reference_id", "PEDIDO-" + System.currentTimeMillis());
         body.put("items", itens);
-        body.put("redirect_url", "https://example.com/sucesso");
-
+        body.put("redirect_url", "https://virtualnfc.com");
+        body.put("notification_urls", List.of("https://seu-dominio.com/api/pagamentos/notificacoes"));
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
         try {

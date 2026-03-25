@@ -18,12 +18,12 @@ public class Produto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @NotBlank
+    @NotBlank(message = "O nome é obrigatório")
     private String nome;
     private String descricao;
     @Positive
     private BigDecimal preco;
     private Integer estoque;
-    @Column(length=1000)
+    @Column(columnDefinition = "TEXT")
     private String imagemUrl;
 }
