@@ -18,7 +18,3 @@ services:
       - NODE_ENV=development
     networks:
       - app-network-loja
-
-networks:
-  app-network-loja:
-    external: true
