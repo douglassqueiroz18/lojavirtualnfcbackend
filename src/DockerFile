@@ -6,7 +6,6 @@ WORKDIR /app
 COPY BACKEND/pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copia código fonte
 COPY BACKEND/src ./src
 
 # Build do projeto
